@@ -6,7 +6,8 @@
             "ESNext.Array",
             "DOM"
         ],
-        "module": "commonjs",
+        "module": "es6",
+        "moduleResolution": "node",
         "outDir": "dist",
         "declaration": true,
         "strict": true,
@@ -14,7 +15,7 @@
         "noImplicitReturns": true,
         "strictFunctionTypes": true,
         "strictPropertyInitialization": true,
-        "strictBindCallApply": true
+        "strictBindCallApply": true,
     },
     "exclude": [
         "node_modules",
