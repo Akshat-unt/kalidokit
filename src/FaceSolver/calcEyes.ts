@@ -1,35 +1,36 @@
 import Vector from "../utils/vector";
 import { clamp, remap } from "../utils/helpers";
-import { Results, XYZ } from "../Types";
+import { Results, XYZ, Side } from "../Types";
+import { RIGHT, LEFT } from "./../constants";
 
 /**
  * Landmark points labeled for eye, brow, and pupils
  */
 const points = {
     eye: {
-        left: [130, 133, 160, 159, 158, 144, 145, 153],
-        right: [263, 362, 387, 386, 385, 373, 374, 380],
+        [LEFT]: [130, 133, 160, 159, 158, 144, 145, 153],
+        [RIGHT]: [263, 362, 387, 386, 385, 373, 374, 380],
     },
     brow: {
-        left: [35, 244, 63, 105, 66, 229, 230, 231],
-        right: [265, 464, 293, 334, 296, 449, 450, 451],
+        [LEFT]: [35, 244, 63, 105, 66, 229, 230, 231],
+        [RIGHT]: [265, 464, 293, 334, 296, 449, 450, 451],
     },
     pupil: {
-        left: [468, 469, 470, 471, 472],
-        right: [473, 474, 475, 476, 477],
+        [LEFT]: [468, 469, 470, 471, 472],
+        [RIGHT]: [473, 474, 475, 476, 477],
     },
 };
 
 /**
  * Calculate eye open ratios and remap to 0-1
  * @param {Array} lm : array of results from tfjs or mediapipe
- * @param {String} side : designate "left" or "right"
+ * @param {Side} side : designate left or right
  * @param {Number} high : ratio at which eye is considered open
  * @param {Number} low : ratio at which eye is comsidered closed
  */
-export const getEyeOpen = (lm: Results, side: "left" | "right" = "left", { high = 0.85, low = 0.55 } = {}) => {
-    let eyePoints = points.eye[side];
-    let eyeDistance = eyeLidRatio(
+export const getEyeOpen = (lm: Results, side: Side = LEFT, { high = 0.85, low = 0.55 } = {}) => {
+    const eyePoints = points.eye[side];
+    const eyeDistance = eyeLidRatio(
         lm[eyePoints[0]],
         lm[eyePoints[1]],
         lm[eyePoints[2]],
@@ -40,11 +41,11 @@ export const getEyeOpen = (lm: Results, side: "left" | "right" = "left", { high 
         lm[eyePoints[7]]
     );
     // human eye width to height ratio is roughly .3
-    let maxRatio = 0.285;
+    const maxRatio = 0.285;
     // compare ratio against max ratio
-    let ratio = clamp(eyeDistance / maxRatio, 0, 2);
+    const ratio = clamp(eyeDistance / maxRatio, 0, 2);
     // remap eye open and close ratios to increase sensitivity
-    let eyeOpenRatio = remap(ratio, low, high);
+    const eyeOpenRatio = remap(ratio, low, high);
     return {
         // remapped ratio
         norm: eyeOpenRatio,
@@ -91,9 +92,9 @@ export const eyeLidRatio = (
 /**
  * Calculate pupil position [-1,1]
  * @param {Results} lm : array of results from tfjs or mediapipe
- * @param {"left"| "right"} side : "left" or "right"
+ * @param {Side} side : left or right
  */
-export const pupilPos = (lm: Results, side: "left" | "right" = "left") => {
+export const pupilPos = (lm: Results, side: Side = LEFT) => {
     const eyeOuterCorner = new Vector(lm[points.eye[side][0]]);
     const eyeInnerCorner = new Vector(lm[points.eye[side][1]]);
     const eyeWidth = eyeOuterCorner.distance(eyeInnerCorner, 2);
@@ -206,8 +207,8 @@ export const calcEyes = (
         };
     }
     //open [0,1]
-    const leftEyeLid = getEyeOpen(lm, "left", { high: high, low: low });
-    const rightEyeLid = getEyeOpen(lm, "right", { high: high, low: low });
+    const leftEyeLid = getEyeOpen(lm, LEFT, { high: high, low: low });
+    const rightEyeLid = getEyeOpen(lm, RIGHT, { high: high, low: low });
 
     return {
         l: leftEyeLid.norm || 0,
@@ -225,8 +226,8 @@ export const calcPupils = (lm: Results) => {
         return { x: 0, y: 0 };
     } else {
         //track pupils using left eye
-        const pupilL = pupilPos(lm, "left");
-        const pupilR = pupilPos(lm, "right");
+        const pupilL = pupilPos(lm, LEFT);
+        const pupilR = pupilPos(lm, RIGHT);
 
         return {
             x: (pupilL.x + pupilR.x) * 0.5 || 0,
@@ -238,11 +239,11 @@ export const calcPupils = (lm: Results) => {
 /**
  * Calculate brow raise
  * @param {Results} lm : array of results from tfjs or mediapipe
- * @param {String} side : designate "left" or "right"
+ * @param {Side} side : designate left or right
  */
-export const getBrowRaise = (lm: Results, side: "left" | "right" = "left") => {
-    let browPoints = points.brow[side];
-    let browDistance = eyeLidRatio(
+export const getBrowRaise = (lm: Results, side: Side = LEFT) => {
+    const browPoints = points.brow[side];
+    const browDistance = eyeLidRatio(
         lm[browPoints[0]],
         lm[browPoints[1]],
         lm[browPoints[2]],
@@ -253,11 +254,11 @@ export const getBrowRaise = (lm: Results, side: "left" | "right" = "left") => {
         lm[browPoints[7]]
     );
 
-    let maxBrowRatio = 1.15;
-    let browHigh = 0.125;
-    let browLow = 0.07;
-    let browRatio = browDistance / maxBrowRatio - 1;
-    let browRaiseRatio = (clamp(browRatio, browLow, browHigh) - browLow) / (browHigh - browLow);
+    const maxBrowRatio = 1.15;
+    const browHigh = 0.125;
+    const browLow = 0.07;
+    const browRatio = browDistance / maxBrowRatio - 1;
+    const browRaiseRatio = (clamp(browRatio, browLow, browHigh) - browLow) / (browHigh - browLow);
     return browRaiseRatio;
 };
 
@@ -269,8 +270,8 @@ export const calcBrow = (lm: Results) => {
     if (lm.length !== 478) {
         return 0;
     } else {
-        const leftBrow = getBrowRaise(lm, "left");
-        const rightBrow = getBrowRaise(lm, "right");
+        const leftBrow = getBrowRaise(lm, LEFT);
+        const rightBrow = getBrowRaise(lm, RIGHT);
         return (leftBrow + rightBrow) / 2 || 0;
     }
 };
